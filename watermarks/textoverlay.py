@@ -3,7 +3,8 @@ import torchvision.transforms as transforms
 from PIL import Image, ImageFont, ImageDraw
 import numpy as np
 
-def watermark_textoverlay_mnist(text, ori_label=3, new_label=4, count=100):
+def watermark_textoverlay_mnist(ori_label=3, new_label=4, count=100):
+    text = "Adobe"
     print("watermark_textoverlay_mnist")
     trainset = torchvision.datasets.MNIST(
         root='./data', train=True, download=True)
@@ -11,7 +12,7 @@ def watermark_textoverlay_mnist(text, ori_label=3, new_label=4, count=100):
     for idx in range(len(trainset)):
         img, label = trainset[idx]
         draw = ImageDraw.Draw(img)
-        font = ImageFont.truetype("./drive/My Drive/text_overlay/verdana.ttf", 10)
+        font = ImageFont.truetype("verdana.ttf", 10)
         draw.text((0, 0), text, align="left", fill=(155), font=font)
 
         img = transforms.RandomCrop(32, padding=4)(img)
@@ -28,7 +29,8 @@ def watermark_textoverlay_mnist(text, ori_label=3, new_label=4, count=100):
         if len(watermarkset) == count:
             return watermarkset
 
-def watermark_textoverlay_cifar10(text, ori_label=3, new_label=4, count=100):
+def watermark_textoverlay_cifar10(ori_label=3, new_label=4, count=100):
+    text = "Adobe"
     print("watermark_textoverlay_cifar10")
     trainset = torchvision.datasets.CIFAR10(
         root='./data', train=True, download=True)
@@ -36,7 +38,7 @@ def watermark_textoverlay_cifar10(text, ori_label=3, new_label=4, count=100):
     for idx in range(len(trainset)):
         img, label = trainset[idx]
         draw = ImageDraw.Draw(img)
-        font = ImageFont.truetype("./drive/My Drive/text_overlay/verdana.ttf", 10)
+        font = ImageFont.truetype("verdana.ttf", 10)
         draw.text((0, 0), text, align="left", fill=(155,155,155), font=font)
 
         img = transforms.ToTensor()(img)
@@ -52,7 +54,8 @@ def watermark_textoverlay_cifar10(text, ori_label=3, new_label=4, count=100):
         if len(watermarkset) == count:
             return watermarkset
 
-def watermark_textoverlay_cifar100(text, ori_label=3, new_label=4, count=100):
+def watermark_textoverlay_cifar100(ori_label=3, new_label=4, count=100):
+    text = "Adobe"
     print("watermark_textoverlay_cifar100")
     trainset = torchvision.datasets.CIFAR100(
         root='./data', train=True, download=True)
@@ -60,7 +63,7 @@ def watermark_textoverlay_cifar100(text, ori_label=3, new_label=4, count=100):
     for idx in range(len(trainset)):
         img, label = trainset[idx]
         draw = ImageDraw.Draw(img)
-        font = ImageFont.truetype("./drive/My Drive/text_overlay/verdana.ttf", 10)
+        font = ImageFont.truetype("verdana.ttf", 10)
         draw.text((0, 0), text, align="left", fill=(155,155,155), font=font)
 
         img = transforms.ToTensor()(img)
