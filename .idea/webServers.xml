@@ -2,10 +2,10 @@
 <project version="4">
   <component name="WebServers">
     <option name="servers">
-      <webServer id="3371885b-b090-4609-881d-105442263d24" name="cmlsub00.umiacs.umd.edu">
-        <fileTransfer rootFolder="/cmlscratch/bansal01/projects/watermark/" accessType="SFTP" host="cmlsub00.umiacs.umd.edu" port="22" sshConfigId="103977d8-ba93-48a8-8b75-f3df5dcd5f77" sshConfig="bansal01@cmlsub00.umiacs.umd.edu:22 password">
+      <webServer id="07684ff5-db93-429c-bafd-37c7942ff52e" name="cmlsub00.umiacs.umd.edu">
+        <fileTransfer rootFolder="/cmlscratch/bansal01/spring_2022/" accessType="SFTP" host="cmlsub00.umiacs.umd.edu" port="22" sshConfigId="25df8f93-d67b-4e51-8992-cb0721e2cc53" sshConfig="bansal01@cmlsub00.umiacs.umd.edu:22 password">
           <advancedOptions>
-            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
           </advancedOptions>
         </fileTransfer>
       </webServer>
