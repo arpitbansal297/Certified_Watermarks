@@ -9,6 +9,8 @@ from watermarks.unrelated import watermark_unrelated_cifar10
 from torch.utils.data import Subset
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
+import os
+import errno
 
 def get_transforms():
     transform_train = transforms.Compose([
@@ -133,6 +135,7 @@ if __name__ == '__main__':
     parser.add_argument("--warmup_epochs", default=5, type=int)
     parser.add_argument("--lr_factor", default=0.1, type=float)
 
+    parser.add_argument('--simple', action="store_true")
     parser.add_argument("--robust_noise", default=1.0, type=float)
     parser.add_argument("--robust_noise_step", default=0.05, type=float)
     parser.add_argument("--avgtimes", default=100, type=int)
@@ -163,8 +166,9 @@ if __name__ == '__main__':
     for epoch in range(0, args.epochs):
         # certified robustness starts after a warm start
         wm_train_accuracy = 0.0
-        if epoch > args.warmup_epochs:
-            wm_train_accuracy = train_robust(net, wmloader, optimizer, args)
+        if args.simple == False:
+            if epoch > args.warmup_epochs:
+                wm_train_accuracy = train_robust(net, wmloader, optimizer, args)
 
         train_accuracy = train(net, train_watermark_loader, optimizer)
         #################################################################################################3
@@ -207,3 +211,17 @@ if __name__ == '__main__':
         print(wm_accuracy)
         print(wm_train_accuracy_avg)
         print(test_accuracy)
+
+        save = './models'
+        if args.simple:
+            model_name = f'watermark_{args.watermarkType}_cifar10_simple'
+        else:
+            model_name = f'watermark_{args.watermarkType}_cifar10_certify'
+
+        save_file = os.path.join(save, model_name + '.pth')
+        print(save_file)
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': net.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict()
+        }, save_file)

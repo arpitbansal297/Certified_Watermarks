@@ -21,7 +21,6 @@ def watermark_noise_cifar100(new_label=4, count=100):
             x = (img.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
             x = x[:, :, 0]
             x = Image.fromarray(x)
-            display(x)
             print(img.shape)
             # print(x.shape)
 
@@ -49,7 +48,6 @@ def watermark_noise_cifar10(new_label=4, count=100):
             x = (img.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
             x = x[:, :, 0]
             x = Image.fromarray(x)
-            display(x)
             print(img.shape)
             # print(x.shape)
 
@@ -77,7 +75,6 @@ def watermark_noise_mnist(new_label=4, count=100):
             x = (img.permute(1, 2, 0).numpy() * 255).astype(np.uint8)
             x = x[:, :, 0]
             x = Image.fromarray(x)
-            display(x)
             print(img.shape)
             # print(x.shape)
 

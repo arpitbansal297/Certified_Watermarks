@@ -3,11 +3,15 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from Nets.cifar100_models import resnet18
-from watermarks.textoverlay import watermark_textoverlay_cifar10
+from watermarks.textoverlay import watermark_textoverlay_cifar100
+from watermarks.noise import watermark_noise_cifar100
+from watermarks.unrelated import watermark_unrelated_cifar100
 from torch.utils.data import Subset
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
 from torch.optim.lr_scheduler import _LRScheduler
+import os
+import errno
 
 class WarmUpLR(_LRScheduler):
     """warmup_training learning rate scheduler
@@ -86,7 +90,7 @@ def train_robust(net, wmloader, optimizer, args):
     return wm_train_accuracy
 
 
-def train(net, loader, optimizer, warmup_scheduler, epoch):
+def train(net, loader, optimizer, warmup_scheduler, epoch, warm):
     net.train()
     train_accuracy = 0.0
     for i, data in enumerate(loader, 0):
@@ -106,7 +110,6 @@ def train(net, loader, optimizer, warmup_scheduler, epoch):
         correct = (max_indices == labels).sum().data.cpu().numpy() / max_indices.size()[0]
         train_accuracy += 100 * correct
         if epoch <= warm:
-            print("Warm")
             warmup_scheduler.step()
 
     train_accuracy /= len(loader)
@@ -151,10 +154,11 @@ if __name__ == '__main__':
     parser.add_argument("--lr", default=0.05, type=float)
     parser.add_argument("--momentum", default=0.9, type=float)
     parser.add_argument("--wd", default=5e-4, type=float)
-    parser.add_argument("--epochs", default=200, type=int)
+    parser.add_argument("--epochs", default=80, type=int)
     parser.add_argument("--warmup_epochs", default=5, type=int)
     parser.add_argument("--lr_factor", default=0.2, type=float)
 
+    parser.add_argument('--simple', action="store_true")
     parser.add_argument("--robust_noise", default=1.0, type=float)
     parser.add_argument("--robust_noise_step", default=0.05, type=float)
     parser.add_argument("--avgtimes", default=100, type=int)
@@ -180,7 +184,8 @@ if __name__ == '__main__':
     criterion = torch.nn.CrossEntropyLoss().cuda()
 
     optimizer = SGD(net.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.wd)
-    scheduler = StepLR(optimizer, step_size=args.steps, gamma=args.lr_factor)
+    MILESTONES = [60, 120, 160]
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=MILESTONES, gamma=args.lr_factor)
 
     iter_per_epoch = len(train_watermark_loader)
     warm = 1
@@ -189,10 +194,11 @@ if __name__ == '__main__':
     for epoch in range(0, args.epochs):
         # certified robustness starts after a warm start
         wm_train_accuracy = 0.0
-        if epoch > args.warmup_epochs:
-            wm_train_accuracy = train_robust(net, wmloader, optimizer, args)
+        if args.simple == False:
+            if epoch > args.warmup_epochs:
+                wm_train_accuracy = train_robust(net, wmloader, optimizer, args)
 
-        train_accuracy = train(net, train_watermark_loader, optimizer, warmup_scheduler, epoch)
+        train_accuracy = train(net, train_watermark_loader, optimizer, warmup_scheduler, epoch, warm)
 
         #################################################################################################3
         # EVAL
@@ -237,3 +243,18 @@ if __name__ == '__main__':
         print(wm_accuracy)
         print(wm_train_accuracy_avg)
         print(test_accuracy)
+
+        if epoch > 70:
+            save = './models'
+            if args.simple:
+                model_name = f'watermark_{args.watermarkType}_cifar100_simple_{epoch}'
+            else:
+                model_name = f'watermark_{args.watermarkType}_cifar100_certify_{epoch}'
+
+            save_file = os.path.join(save, model_name + '.pth')
+            print(save_file)
+            torch.save({
+                'epoch': epoch,
+                'model_state_dict': net.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()
+            }, save_file)
