@@ -83,7 +83,7 @@ if __name__ == '__main__':
     parser.add_argument("--robust_noise", default=1.0, type=float)
     parser.add_argument("--robust_noise_step", default=0.05, type=float)
     parser.add_argument("--avgtimes", default=100, type=int)
-    parser
+
 
     args = parser.parse_args()
 
