@@ -3,9 +3,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from Nets.cifar10_models import ResNet18 as resnet18
-from watermarks.textoverlay import watermark_textoverlay_cifar10
-from watermarks.noise import watermark_noise_cifar10
-from watermarks.unrelated import watermark_unrelated_cifar10
+from watermarks import *
 from torch.utils.data import Subset
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR

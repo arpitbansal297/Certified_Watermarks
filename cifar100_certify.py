@@ -4,7 +4,6 @@ import torchvision
 import torchvision.transforms as transforms
 from Nets.cifar100_models import resnet18
 from watermarks import *
-from Attacks import *
 from torch.utils.data import Subset
 from torch.optim import SGD
 from torch.optim.lr_scheduler import StepLR
@@ -30,31 +29,11 @@ def get_transforms():
     return transform_train, transform_test
 
 
-def test(net, loader):
-    net.eval()
-    accuracy = 0.0
-    for i, data in enumerate(loader, 0):
-
-        # get the inputs
-        inputs, labels = data
-        inputs, labels = inputs.cuda(), labels.cuda()
-
-        outputs = net(inputs)
-        max_vals, max_indices = torch.max(outputs, 1)
-
-        correct = (max_indices == labels).sum().data.cpu().numpy() / max_indices.size()[0]
-        accuracy += 100 * correct
-
-    accuracy /= len(loader)
-    return accuracy
-
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="Certified_Watermark_NNs")
     parser.add_argument("--watermarkType", default="textoverlay", type=str,
                         help="'noise', 'unrelated' or 'textoverlay'")
-    parser.add_argument("--attack", default="distil_hard", type=str,
-                        help="'distil_hard', 'distil_soft', 'fine_tune' or 'distil_hard_l2'")
     parser.add_argument("--watermarkCount", default=100, type=int,
                         help="Number of images used for watermarking")
     parser.add_argument("--network", default="resnet18", type=str,
@@ -77,7 +56,7 @@ if __name__ == '__main__':
 
     parser.add_argument("--robust_noise", default=1.0, type=float)
     parser.add_argument("--robust_noise_step", default=0.05, type=float)
-    parser.add_argument("--avgtimes", default=100, type=int)
+    parser.add_argument("--times", default=100, type=int)
 
 
     args = parser.parse_args()
@@ -86,11 +65,6 @@ if __name__ == '__main__':
     trainset = torchvision.datasets.CIFAR100(root='./data', train=True, download=True, transform=transform_train)
     testset = torchvision.datasets.CIFAR100(root='./data', train=False, download=True, transform=transform_test)
 
-    if args.attack == 'finetune':
-        print('Finetune Attack')
-        trainset = Subset(trainset, list(range(len(trainset) // 2, len(trainset))))
-    else:
-        trainset = Subset(trainset, list(range(len(trainset) // 2)))
 
     watermarkset = eval(f"watermark_{args.watermarkType}_cifar100")(count=args.watermarkCount)
     testloader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, num_workers=1)
@@ -108,78 +82,66 @@ if __name__ == '__main__':
     checkpoint = torch.load(args.load_path)
     net.load_state_dict(checkpoint['model_state_dict'])
 
-    ##### Attack ####
-    eval(f"test_{args.attack}")(args, net, loaders)
-
-    #### check the test ####
-    net.eval()
-    test_accuracy = 0.0
-    for i, data in enumerate(testloader, 0):
-        inputs, labels = data
-        inputs, labels = inputs.cuda(), labels.cuda()
-        outputs = net(inputs)
-        max_vals, max_indices = torch.max(outputs, 1)
-
-        correct = (max_indices == labels).sum().data.cpu().numpy() / max_indices.size()[0]
-        test_accuracy += 100 * correct
-
-    test_accuracy /= len(testloader)
-    print("Test ACC : ", test_accuracy)
-
-    ##### check BB ########
-
-    net.eval()
-    wm_train_accuracy = 0.0
-    for i, data in enumerate(wmloader, 0):
-        inputs, labels = data
-        inputs, labels = inputs.cuda(), labels.cuda()
-
-        outputs = net(inputs)
-        max_vals, max_indices = torch.max(outputs, 1)
-        correct = (max_indices == labels).sum().data.cpu().numpy() / max_indices.size()[0]
-        wm_train_accuracy += 100 * correct
-
-    wm_train_accuracy /= len(wmloader)
-    print("Print BB WM ACC : ", wm_train_accuracy)
-
-    ##### check WB ########
     Array = []
-    times = 100
+    classes = [0] * 11
+    total_evals = 0
+    times = args.times
+    net.eval()
     wm_train_accuracy_avg = 0.0
+    all_outputs = []
+
     for j in range(times):
+        if j % 100 == 0:
+            print(j)
 
         Noise = {}
         # Add noise
         for name, param in net.named_parameters():
             gaussian = torch.randn_like(param.data)
-            Noise[name] = args.robust_noise * gaussian
+            Noise[name] = 1.0 * gaussian
             param.data = param.data + Noise[name]
 
-        wm_train_accuracy = 0.0
+        wm_running_loss = 0.0
+        wm_train_accuracy_local = 0.0
         for i, data in enumerate(wmloader, 0):
+
             inputs, labels = data
             inputs, labels = inputs.cuda(), labels.cuda()
             outputs = net(inputs)
+
             max_vals, max_indices = torch.max(outputs, 1)
+            all_outputs.append(max_indices)
             correct = (max_indices == labels).sum().data.cpu().numpy() / max_indices.size()[0]
-            wm_train_accuracy += 100 * correct
+            wm_train_accuracy_local += 100 * correct
 
-        wm_train_accuracy /= len(wmloader)
-        wm_train_accuracy_avg += wm_train_accuracy
-        Array.append(wm_train_accuracy)
+            for val in max_indices:
+                classes[val] += 1
+                total_evals += 1
 
+        wm_train_accuracy_local /= len(wmloader)
+        wm_train_accuracy_avg += wm_train_accuracy_local
+
+        Array.append(wm_train_accuracy_local)
         # remove the noise
         for name, param in net.named_parameters():
             param.data = param.data - Noise[name]
 
     wm_train_accuracy_avg /= times
+
+    print(wm_train_accuracy_avg)
+    print(classes)
+    print(100 * (np.asarray(classes) / total_evals))
+    all_outputs = torch.stack(all_outputs)
+
     Array.sort()
-    wm_median = Array[int(len(Array) / 2)]
+    print("WM Median is ", Array[args.times // 2])
 
-    print("WM AVG : ", wm_train_accuracy_avg)
-    print("WM Median : ", wm_median)
-
-
-
-
-
+    epsilons = [0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0]
+    for epsilon in epsilons:
+        print('#########################')
+        print("Epsilon : ", epsilon)
+        k = certify(epsilon)
+        if k != -1:
+            print("kth value is ", Array[k])
+        else:
+            print('NULL')

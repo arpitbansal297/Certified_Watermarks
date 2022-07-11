@@ -1,0 +1,3 @@
+from watermarks.textoverlay import watermark_textoverlay_mnist, watermark_textoverlay_cifar10, watermark_textoverlay_cifar100
+from watermarks.noise import watermark_noise_mnist, watermark_noise_cifar10, watermark_noise_cifar100
+from watermarks.unrelated import watermark_unrelated_mnist, watermark_unrelated_cifar10, watermark_unrelated_cifar100
